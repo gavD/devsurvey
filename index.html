@@ -48,6 +48,13 @@
         letter-spacing: 0.11em;
     }
 
+    .circle {
+        width: 4px;
+        height: 4px;
+        position: relative;
+        background: green;
+    }
+
 
 </style>
 
@@ -185,25 +192,27 @@
 </div>
 
 <script   src="https://code.jquery.com/jquery-3.2.1.min.js"   integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="   crossorigin="anonymous"></script>
+<script   src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"   crossorigin="anonymous"></script>
 <script>
     $(function() {
+
 
         // yeah yeah jquery - it's quick and dirty!
 
         var apiData;
 
-        $.get("https://api.myjson.com/bins/6uabj", function(data, textStatus, jqXHR) {
-            apiData = data;
-            console.log("API data is:");
-            console.log(apiData);
-        });
+        function updateData(cb) {
+            $.get("https://api.myjson.com/bins/6uabj", function(data, textStatus, jqXHR) {
+                apiData = data;
+                console.log(data);
 
-        $('#submitter').click(function() {
+                if (cb) {
+                    cb();
+                }
+            });
+        }
 
-            if (!confirm('Are these your final answers?')) {
-                return;
-            }
-
+        function submitResults(cb) {
             if (!apiData.results) {
                 apiData.results = [];
             }
@@ -222,8 +231,48 @@
                 dataType:"json",
                 success: function(data, textStatus, jqXHR){
                     console.log("Posted");
+
+                    if (cb) {
+                        cb();
+                    }
                 }
             });
+        }
+
+        function plot() {
+            const flatData = _(apiData.results.map(result => {
+                return JSON.parse(result)
+            })).flatten().value();
+
+            const width = $('input[name="features"]').width();
+
+            _(flatData).forEach(data => {
+
+                const left = (width / 4) * (data.value-1);
+
+                var $div = $("<div class='circle' style='left: " + left + "px'><!--" + data.value + "--></div>");
+                $(`input[name='${data.name}']`).parent().append($div);
+
+            });
+
+            // Add a circle for each one
+
+        }
+
+        updateData();
+
+        _.transform({ 'a': 1, 'b': 2, 'c': 1 }, function(result, value, key) {
+            (result[value] || (result[value] = [])).push(key);
+        }, {});
+
+        $('#submitter').click(function() {
+
+            if (!confirm('Are these your final answers?')) {
+                return;
+            }
+
+            updateData(submitResults(plot));
+
         });
 
         // create bin with  -
